@@ -1,9 +1,6 @@
 import { Redirect, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import * as SplashScreen from "expo-splash-screen";
-
-SplashScreen.preventAutoHideAsync();
 
 function AuthGuard() {
   const { isSignedIn } = { isSignedIn: false };
@@ -21,7 +18,6 @@ export default function RootLayout() {
       <AuthGuard />
 
       <Stack screenOptions={{ headerShown: false }}>
-        ;
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
