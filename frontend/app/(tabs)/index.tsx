@@ -38,8 +38,8 @@ export default function MessagesScreen() {
     fetchConversations();
   }, []);
 
-  const lowerSearch = search.toLowerCase();
-  const filtered = search
+  const lowerSearch = search.trim().toLowerCase();
+  const filtered = search.trim()
     ? conversations.filter(
         (c) =>
           c.participant?.name.toLowerCase().includes(lowerSearch) ||

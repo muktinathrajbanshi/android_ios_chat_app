@@ -12,7 +12,7 @@ interface AvatarProps {
 }
 
 export default function Avatar({ name, size = 40, online, src }: AvatarProps) {
-  const color = PALETTE[name.charCodeAt[0] % PALETTE.length];
+  const color = PALETTE[name.charCodeAt(0) % PALETTE.length];
 
   const initials = name
     .split(" ")
