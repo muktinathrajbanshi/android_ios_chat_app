@@ -26,6 +26,7 @@ export default function StoryViewer({ userStory, onClose }: Props) {
   const animRef = useRef<Animated.CompositeAnimation>(null);
 
   const story = userStory.stories[currentIndex];
+  if (!story) return null;
 
   const startProgress = () => {
     progressAnim.setValue(0);
