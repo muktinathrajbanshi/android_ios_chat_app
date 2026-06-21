@@ -25,7 +25,15 @@ export default function Search() {
   const fetchUsers = async () => {
     setLoading(true);
     setTimeout(() => {
-      setUsers(dummyUsers);
+      const filtered = search.trim()
+        ? dummyUsers.filter(
+            (u) =>
+              u.name.toLowerCase().includes(search.toLowerCase()) ||
+              u.email.toLowerCase().includes(search.toLowerCase()) ||
+              u.handle.toLowerCase().includes(search.toLowerCase()),
+          )
+        : dummyUsers;
+      setUsers(filtered);
       setLoading(false);
     }, 1000);
   };
@@ -91,7 +99,7 @@ export default function Search() {
               <View style={styles.userInfo}>
                 <View style={styles.nameRow}>
                   <Text style={styles.userName}>{u.name}</Text>
-                  <Text style={styles.userHandle}>@{u.name}</Text>
+                  <Text style={styles.userHandle}>@{u.handle}</Text>
                 </View>
                 <Text style={styles.userEmail} numberOfLines={1}>
                   {u.email}

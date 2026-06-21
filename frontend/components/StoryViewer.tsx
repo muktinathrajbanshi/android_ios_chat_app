@@ -26,10 +26,13 @@ export default function StoryViewer({ userStory, onClose }: Props) {
   const animRef = useRef<Animated.CompositeAnimation>(null);
 
   const story = userStory.stories[currentIndex];
-  if (!story) {
-    onClose();
-    return null;
-  }
+  useEffect(() => {
+    if (!story) {
+      onClose();
+    }
+  }, [story, onClose]);
+
+  if (!story) return null;
 
   const startProgress = () => {
     progressAnim.setValue(0);
@@ -44,6 +47,7 @@ export default function StoryViewer({ userStory, onClose }: Props) {
   };
 
   useEffect(() => {
+    if (!story) return;
     startProgress();
     return () => animRef.current?.stop();
   }, [currentIndex]);
