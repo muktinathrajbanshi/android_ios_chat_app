@@ -24,8 +24,9 @@ export default function Search() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    const currentSearch = search.trim();
     setTimeout(() => {
-      const filtered = search.trim()
+      const filtered = currentSearch
         ? dummyUsers.filter(
             (u) =>
               u.name.toLowerCase().includes(search.toLowerCase()) ||

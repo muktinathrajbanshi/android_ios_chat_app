@@ -181,7 +181,10 @@ export default function Profile() {
             </TouchableOpacity>
 
             {/* Cancel Button  */}
-            <TouchableOpacity style={styles.cancelBtn}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setEditMode(false)}
+            >
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
