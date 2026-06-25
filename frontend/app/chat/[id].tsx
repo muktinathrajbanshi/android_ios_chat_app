@@ -52,10 +52,11 @@ export default function ChatScreen() {
   // Scroll to bottom when messages update
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(
+      const timeoutId = setTimeout(
         () => flatListRef.current?.scrollToEnd({ animated: true }),
         100,
       );
+      return () => clearTimeout(timeoutId);
     }
   }, [messages]);
 
@@ -79,15 +80,23 @@ export default function ChatScreen() {
     }
   };
 
+  const sendTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const send = async () => {
     if ((!text.trim() && !mediaUri) || !selectedConversation) return;
     setSending(true);
-    setTimeout(() => {
+    sendTimeoutRef.current = setTimeout(() => {
       setSending(false);
       setText("");
       setMediaUri(null);
     }, 500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (sendTimeoutRef.current) clearTimeout(sendTimeoutRef.current);
+    };
+  }, []);
 
   const handleTyping = (val: string) => {
     setText(val);
