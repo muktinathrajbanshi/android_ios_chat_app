@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,7 +13,6 @@ import { styles } from "@/assets/styles/ProfileScreen.styles";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/constants/Colors";
 import Avatar from "@/components/Avatar";
-import { TextInput } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { api, useApp } from "@/context/AppContext";
@@ -63,22 +63,31 @@ export default function Profile() {
       formData.append("handle", profileHandle);
       formData.append("bio", profileBio);
       if (avatarUri) {
-        formData.append("avatar", {
-          uri: avatarUri,
-          type: "image/jpeg",
-          name: "avatar.jpg",
-        } as any);
+        // On web, avatarUri is a blob URL
+        if (avatarUri.startsWith("blob:") || avatarUri.startsWith("data:")) {
+          const response = await fetch(avatarUri);
+          const blob = await response.blob();
+          formData.append("avatar", blob, "avatar.jpg");
+        } else {
+          // On mobile
+          formData.append("avatar", {
+            uri: avatarUri,
+            type: "image/jpeg",
+            name: "avatar.jpg",
+          } as any);
+        }
       }
 
-      const { data } = await api.put("/api/users/profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await api.put("/api/users/profile", formData);
       if (data.success) {
         await updateUser(data.user);
         if (data.user.avatar) setSaveAvatar(data.user.avatar);
+        setProfileName(data.user.name ?? "");
+        setProfileHandle(data.user.handle ?? "");
+        setProfileBio(data.user.bio ?? "");
+        setAvatarUri(null);
         Alert.alert("Success", "Profile updated!");
         setEditMode(false);
-        setAvatarUri(null);
       }
     } catch (err: any) {
       Alert.alert(
@@ -100,9 +109,10 @@ export default function Profile() {
   const getUser = async () => {
     try {
       const { data } = await api.get("/api/users/profile");
-      setProfileName(data.user.name);
-      setProfileHandle(data.user.handle);
-      setProfileBio(data.user.bio);
+      if (!data?.user) return;
+      setProfileName(data.user.name ?? "");
+      setProfileHandle(data.user.handle ?? "");
+      setProfileBio(data.user.bio ?? "");
       if (data.user.avatar) {
         setSaveAvatar(data.user.avatar);
         setAvatarUri(null);
@@ -113,12 +123,17 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    getUser();
-  }, []);
+    if (auth.token) {
+      getUser();
+    }
+  }, [auth.token]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Header  */}
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
@@ -154,7 +169,9 @@ export default function Profile() {
               <Text style={styles.userName}>{profileName}</Text>
               <Text style={styles.userHandle}>@{profileHandle}</Text>
               <Text style={styles.userEmail}>{user?.email}</Text>
-              {user?.bio && <Text style={styles.userBio}>{profileBio}</Text>}
+              {profileBio ? (
+                <Text style={styles.userBio}>{profileBio} </Text>
+              ) : null}
             </View>
           )}
         </View>

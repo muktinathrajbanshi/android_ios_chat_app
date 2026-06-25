@@ -85,6 +85,7 @@ export default function ChatScreen() {
   const send = async () => {
     if ((!text.trim() && !mediaUri) || !selectedConversation) return;
     setSending(true);
+    if (sendTimeoutRef.current) clearTimeout(sendTimeoutRef.current);
     sendTimeoutRef.current = setTimeout(() => {
       setSending(false);
       setText("");

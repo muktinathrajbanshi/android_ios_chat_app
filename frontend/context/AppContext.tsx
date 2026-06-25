@@ -81,11 +81,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isOnline: true,
         lastSeen: new Date().toISOString(),
       };
-      setAuth({ token: _tokenRef.current, user: mappedUser, loading: false });
+      getToken().then((token) => {
+        _tokenRef.current = token;
+        setAuth({ token, user: mappedUser, loading: false });
+      });
     } else {
       setAuth({ token: null, user: null, loading: false });
     }
-  }, [isSignedIn, authLoaded, userLoaded, clerkUser]);
+  }, [isSignedIn, authLoaded, userLoaded, clerkUser, getToken]);
 
   const logout = useCallback(async () => {
     _tokenRef.current = null;

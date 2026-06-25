@@ -1,10 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import {
-  clerkMiddleware,
-  clerkClient,
-  requireAuth,
-  getAuth,
-} from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import User from "../models/User.js";
 
 export interface AuthRequest extends Request {
@@ -17,9 +12,7 @@ export const authMiddleware = async (
   next: NextFunction,
 ) => {
   try {
-    console.log("Auth header:", req.headers.authorization);
     const { userId } = getAuth(req);
-    console.log("userId:", userId);
 
     if (!userId) {
       res.status(401).json({ success: false, message: "Unauthenticated" });
@@ -28,49 +21,59 @@ export const authMiddleware = async (
 
     // Check if user exists locally in MongoDB
     let localUser = await User.findById(userId);
-
     if (!localUser) {
       // Lazy sync: Fetch details from Clerk API
       const clerkUser = await clerkClient.users.getUser(userId);
-      const email = clerkUser.emailAddresses[0]?.emailAddress;
+      const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
       const name =
         [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
         clerkUser.username ||
         "Anonymous";
       // Create fallback handle
-      const handle =
-        clerkUser.username ||
-        clerkUser.emailAddresses[0]?.emailAddress.split("@")[0] ||
-        userId;
+      let baseHandle = (clerkUser.username || email.split("@")[0] || userId)
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "");
 
-      // Ensure unique handle in DB by appending random suffix if needed
-      let finalHandle = handle.toLowerCase().replace(/[^a-z0-9_]/g, "");
-      let handleExists = await User.findOne({ handle: finalHandle });
-      let counter = 1;
-      while (handleExists) {
-        const testHandle = `${finalHandle}${counter}`;
-        handleExists = await User.findOne({ handle: testHandle });
-        if (!handleExists) {
-          finalHandle = testHandle;
-          break;
+      // Upsert with retry loop to handle race conditions
+      let attempts = 0;
+      while (!localUser && attempts < 5) {
+        try {
+          const suffix = attempts === 0 ? "" : attempts;
+          const finalHandle = `${baseHandle}${suffix}`;
+
+          localUser = await User.findOneAndUpdate(
+            { _id: userId },
+            {
+              $setOnInsert: {
+                _id: userId,
+                name,
+                email: email.toLowerCase(),
+                handle: finalHandle,
+                avatar: clerkUser.imageUrl || "",
+                bio: "Hey there! I am using InstaChat.",
+                isOnline: true,
+                lastSeen: new Date(),
+              },
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true },
+          );
+        } catch (err: any) {
+          if (err.code === 11000) {
+            attempts++;
+            continue;
+          }
+          throw err;
         }
-        counter++;
       }
-      localUser = await User.create({
-        _id: userId,
-        name,
-        email: email.toLowerCase(),
-        handle: finalHandle,
-        avatar: clerkUser.imageUrl || "",
-        bio: "Hey there! I am using InstaChat.",
-        isOnline: true,
-        lastSeen: new Date(),
-      });
+
+      if (!localUser) {
+        throw new Error("Failed to provision user after multiple attempts");
+      }
     }
 
     // Attach user info to request for compatibility
     req.user = {
-      id: localUser._id,
+      id: localUser._id.toString(),
       name: localUser.name,
       email: localUser.email,
     };

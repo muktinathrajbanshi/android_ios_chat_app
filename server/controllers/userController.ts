@@ -20,7 +20,8 @@ export const searchUsers = async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const regex = new RegExp(query, "i");
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(escaped, "i");
   const users = await User.find({
     _id: { $ne: req.user!.id },
     $or: [{ name: regex }, { email: regex }, { handle: regex }],
@@ -35,7 +36,7 @@ export const searchUsers = async (req: AuthRequest, res: Response) => {
 export const getProfile = async (req: AuthRequest, res: Response) => {
   const user = await User.findById(req.user!.id);
   if (!user) {
-    res.status(404).json({ success: false, message: "User not found" });
+    return res.status(404).json({ success: false, message: "User not found" });
   }
   res.json({ success: true, user });
 };
@@ -46,8 +47,9 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   const file = req.file;
 
   if (handle) {
+    const normalizedHandle = handle.toLowerCase().trim();
     const handleExists = await User.findOne({
-      handle,
+      handle: normalizedHandle,
       _id: { $ne: req.user!.id },
     });
     if (handleExists) {

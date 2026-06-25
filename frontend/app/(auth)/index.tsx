@@ -63,13 +63,23 @@ export default function AuthScreen() {
           await setActive({ session: signIn.createdSessionId });
           router.replace("/(tabs)");
         } else if (signIn.status === "needs_first_factor" && signIn.emailCode) {
-          await signIn.emailCode.sendCode();
+          const { error } = await signIn.emailCode.sendCode();
+          if (error) throw error;
           setVerifyingMode("login");
           setVerifying(true);
-        } else if (signIn.status === "needs_second_factor" && signIn.mfa) {
-          await signIn.mfa.sendEmailCode();
+        } else if (signIn.status === "needs_client_trust" && signIn.mfa) {
+          const { error } = await signIn.mfa.sendEmailCode();
+          if (error) throw error;
           setVerifyingMode("login_mfa");
           setVerifying(true);
+        } else if (signIn.status === "needs_second_factor" && signIn.mfa) {
+          const { error } = await signIn.mfa.sendEmailCode();
+          if (error) throw error;
+          setVerifyingMode("login_mfa");
+          setVerifying(true);
+        } else {
+          // Handle other unhandled statuses gracefully
+          throw new Error(`Unsupported sign-in status: ${signIn.status}`);
         }
       } else {
         if (!signUp) return;
@@ -136,13 +146,15 @@ export default function AuthScreen() {
       } else {
         if (!signIn) return;
         if (verifyingMode === "login_mfa") {
-          await signIn.mfa.verifyEmailCode({
+          const { error } = await signIn.mfa.verifyEmailCode({
             code: verificationCode,
           });
+          if (error) throw error;
         } else {
-          await signIn.emailCode.verifyCode({
+          const { error } = await signIn.emailCode.verifyCode({
             code: verificationCode,
           });
+          if (error) throw error;
         }
 
         if (signIn.status === "complete") {
